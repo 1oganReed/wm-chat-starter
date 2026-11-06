@@ -1,6 +1,6 @@
 // mongo.js: sets up the chat's database, chatDB, on MongoDB.
 // YOU write both functions at Station A. Replace each throw line with your code.
-import { MongoClient } from "mongodb";
+import { MongoClient, MongoNetworkError } from "mongodb";
 import { getMongoURI } from "./setup/practice-server.js";
 
 const DB_NAME = "chatDB";
@@ -9,7 +9,12 @@ const DB_NAME = "chatDB";
 // Gets the connection string, connects a MongoClient to it,
 // and gives back (a promise for) the chatDB database.
 export async function connectDB() {
-  throw new Error("connectDB() is not built yet (Station A)");
+  const uri = await getMongoURI();
+
+  const client = new MongoClient(uri);
+  await client.connect();
+
+  return client.db(DB_NAME);
 }
 
 // ---------- Station A: Set up the collections ----------
@@ -22,5 +27,32 @@ export async function seedDatabase(db) {
   const now = new Date();
   const welcome = "Welcome to WM Chat! Everyone who signs up joins the Lounge. Say hi!";
 
-  throw new Error("seedDatabase() is not built yet (Station A)");
+  if ((await users.countDocuments()) > 0) {
+    
+    return false;
+  }
+
+  const bot = { _id: "wm-bot", displayName: "WM Bot", createdAt: now };
+  await users.insertOne(bot);
+   chats.insertOne(chat);
+
+  const lounge = {
+    name: "West-MEC Lounge",
+    type: "group",
+    members: ["wm-bot"],
+    createdBy: "wm-bot",
+    createdAt: now,
+    updatedAt: now,
+    lastMessage: { from: "wm-bot", text: welcome, sentAt: now },
+  };
+  const loungeInserted = await chats.insertOne(lounge);
+
+  await messages.insertOne({
+    chatId: loungeInserted.insertedId,
+    from: "wm-bot",
+    text: welcome,
+    sentAt: now,
+  });
+
+  return true;
 }
